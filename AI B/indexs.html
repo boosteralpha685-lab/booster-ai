@@ -29,7 +29,6 @@
             height: 100vh;
         }
         
-        /* Sidebar */
         .sidebar {
             width: 260px;
             background: rgba(10, 10, 15, 0.95);
@@ -119,7 +118,6 @@
             background: rgba(239, 68, 68, 0.2);
         }
         
-        /* Chat area */
         .chat-main {
             flex: 1;
             display: flex;
@@ -188,7 +186,6 @@
             border: 1px solid #2a2a35;
         }
         
-        /* Typing cursor animation */
         .typing-cursor {
             display: inline-block;
             width: 2px;
@@ -204,7 +201,6 @@
             51%, 100% { opacity: 0; }
         }
         
-        /* Code blocks */
         .bubble pre {
             margin: 8px 0;
             border-radius: 10px;
@@ -222,7 +218,6 @@
             cursor: pointer;
         }
         
-        /* Input area */
         .input-container {
             padding: 20px 32px 28px;
             background: #0f0f14;
@@ -395,6 +390,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    // ============================================
+    // FIXED: Updated to use your hosted backend URL
+    // ============================================
+    const API_URL = 'https://booster-ai-1.onrender.com';
+    
     const messagesDiv = document.getElementById('messages');
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -410,13 +410,11 @@
     let isRecording = false;
     let audioChunks = [];
     
-    // Auto-resize textarea
     messageInput.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 80) + 'px';
     });
     
-    // Typing animation - character by character
     async function addMessageWithTyping(text, isUser, imageData = null, fileName = null) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
@@ -436,7 +434,6 @@
             </div>`;
         }
         
-        const textSpan = document.createElement('span');
         content += '<span id="typingText"></span><span class="typing-cursor"></span>';
         
         bubble.innerHTML = content;
@@ -446,10 +443,9 @@
         
         const typingSpan = bubble.querySelector('#typingText');
         
-        // Type character by character
         if (!isUser && text) {
             let i = 0;
-            const speed = 15; // milliseconds per character
+            const speed = 15;
             while (i < text.length) {
                 typingSpan.textContent += text[i];
                 i++;
@@ -460,11 +456,9 @@
             typingSpan.textContent = text;
         }
         
-        // Remove cursor and format code
         const cursor = bubble.querySelector('.typing-cursor');
         if (cursor) cursor.remove();
         
-        // Format code blocks after typing
         let formatted = bubble.innerHTML;
         formatted = formatted.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             return `<pre><code class="language-${lang || 'plaintext'}">${escapeHtml(code)}</code></pre>`;
@@ -480,7 +474,6 @@
         return div.innerHTML;
     }
     
-    // Regular add without typing (for user messages)
     function addMessage(text, isUser, imageData = null, fileName = null) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
@@ -614,9 +607,12 @@
         }
     };
     
+    // ============================================
+    // FIXED: Using API_URL variable for all fetch calls
+    // ============================================
     clearHistoryBtn.onclick = async () => {
         try {
-            await fetch('http://localhost:5000/clear-history', {
+            await fetch(`${API_URL}/clear-history`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: sessionId })
@@ -650,7 +646,8 @@
         showTyping();
         
         try {
-            const response = await fetch('http://localhost:5000/chat', {
+            // FIXED: Using the hosted backend URL
+            const response = await fetch(`${API_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -666,12 +663,11 @@
             if (data.error) {
                 addMessage(`❌ ${data.error}`, false);
             } else {
-                // Type the response character by character
                 await addMessageWithTyping(data.reply, false);
             }
         } catch (error) {
             removeTyping();
-            addMessage(`❌ Cannot connect to backend. Make sure backend.py is running.`, false);
+            addMessage(`❌ Cannot connect to backend. Please make sure the server is running.`, false);
         }
     }
     
