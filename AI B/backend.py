@@ -158,6 +158,23 @@ def clear_history():
 def health():
     return jsonify({'status': 'Booster AI running', 'model': 'Llama 3.3 Groq'})
 
+# ============================================
+# ✅ NEW HOME ROUTE (Fixes 404 error)
+# ============================================
+@app.route('/')
+def home():
+    return jsonify({
+        'message': 'Welcome to Booster AI!',
+        'status': 'running',
+        'endpoints': {
+            'chat': '/chat (POST)',
+            'health': '/health (GET)',
+            'clear-history': '/clear-history (POST)'
+        },
+        'docs': 'Send POST requests to /chat with {"message": "your text"}',
+        'brand': 'Alpha Booster | Rwanda Creative IMG'
+    })
+
 if __name__ == '__main__':
     print("="*50)
     print("🤖 BOOSTER AI - NO REPETITION VERSION")
