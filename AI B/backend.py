@@ -161,6 +161,12 @@ def health():
 @app.route('/')
 def home():
     return render_template('index.html')
+
+from flask import send_from_directory
+
+@app.route('/')
+def serve_html():
+    return send_from_directory('AI B', 'index.html')
 # ============================================
 # ✅ NEW HOME ROUTE (Fixes 404 error)
 # ============================================
