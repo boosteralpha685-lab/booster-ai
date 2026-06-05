@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import requests
 import base64
@@ -6,7 +6,7 @@ import io
 import docx2txt
 import PyPDF2
 from datetime import datetime
-import os  # ← ADDED
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -157,7 +157,10 @@ def clear_history():
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'Booster AI running', 'model': 'Llama 3.3 Groq'})
-
+    
+@app.route('/')
+def home():
+    return render_template('index.html')
 # ============================================
 # ✅ NEW HOME ROUTE (Fixes 404 error)
 # ============================================
