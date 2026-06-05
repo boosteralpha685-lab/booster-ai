@@ -6,15 +6,15 @@ import io
 import docx2txt
 import PyPDF2
 from datetime import datetime
+import os  # ← ADDED
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# 🔑 YOUR GROQ API KEY
+# 🔑 YOUR GROQ API KEY - From Render Environment
 # ============================================
-GROQ_API_KEY = ""  # <--- PASTE YOUR API KEY HERE
-
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")  # ← CHANGED
 # ============================================
 # 💾 CONVERSATION MEMORY (Fixed - no repetition)
 # ============================================
