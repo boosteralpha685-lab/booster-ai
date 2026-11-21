@@ -1,96 +1,102 @@
-import os
-import io
-import base64
-from datetime import datetime
+"code": generated_code,
+            "model": GROQ_MODEL,
+            "type": "web_program"
+        }), 200
 
-import requests
-import docx2txt
-import PyPDF2
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": "Website generation timed out. Please try again."
+        }), 504
+    except requests.exceptions.RequestException as exc:
+        print(f"Web-generation network error: {exc}")
+        return jsonify({
+            "error": "Could not connect to the web-program generator."
+        }), 502
+    except Exception as exc:
+        print(f"Unexpected web-generation error: {exc}")
+        return jsonify({"error": "An unexpected web-generation error occurred."}), 500
 
-app = Flask(__name__)
-CORS(app)
 
 # ============================================================
-# GROQ CONFIGURATION
+# CLEAR CONVERSATION HISTORY
 # ============================================================
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
+@app.route("/clear-history", methods=["POST"])
+def clear_history():
+    try:
+        data = request.get_json(silent=True) or {}
+        session_id = str(data.get("session_id") or "default")[:128]
 
-# Groq's currently listed production model.
-# You can override this in your hosting environment if needed.
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b").strip()
+        if session_id in conversation_history:
+            conversation_history[session_id] = []
+            return jsonify({"status": "History cleared"}), 200
 
-GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
-GROQ_TIMEOUT = int(os.environ.get("GROQ_TIMEOUT", "60"))
+        return jsonify({"status": "No history found"}), 200
+
+    except Exception as exc:
+        print(f"Clear-history error: {exc}")
+        return jsonify({"error": "Could not clear conversation history."}), 500
+
 
 # ============================================================
-# CONVERSATION MEMORY
-# NOTE: This is in-memory only; it resets when the server restarts.
+# HEALTH CHECK
 # ============================================================
-conversation_history = {}
-MAX_HISTORY_MESSAGES = 20
-MAX_CONTEXT_MESSAGES = 5
-MAX_FILE_TEXT_CHARS = 12000
-MAX_PROMPT_CHARS = 24000
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "Booster AI running",
+        "model": GROQ_MODEL,
+        "provider": "Groq",
+        "vision_model": GROQ_VISION_MODEL,
+        "api_key_configured": bool(GROQ_API_KEY)
+    }), 200
 
 
-def get_conversation_context(session_id, max_messages=MAX_CONTEXT_MESSAGES):
-    history = conversation_history.get(session_id, [])[-max_messages:]
-    if not history:
-        return ""
-
-    parts = ["\nPrevious conversation (context only):"]
-    for entry in history:
-        parts.append(f"User: {entry['user'][:300]}")
-        parts.append(f"Assistant: {entry['ai'][:300]}")
-
-    parts.append(
-        "Use this only to understand the conversation. "
-        "Do not repeat previous answers unless necessary."
-    )
-    return "\n".join(parts)
-
-
-def save_to_history(session_id, user_msg, ai_msg):
-    history = conversation_history.setdefault(session_id, [])
-    history.append({
-        "user": str(user_msg)[:1000],
-        "ai": str(ai_msg)[:1500],
-        "timestamp": datetime.now().isoformat()
-    })
-    conversation_history[session_id] = history[-MAX_HISTORY_MESSAGES:]
+# ============================================================
+# HOME
+# ============================================================
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "message": "Welcome to Booster AI!",
+        "project": "Booster AI",
+        "status": "running",
+        "model": GROQ_MODEL,
+        "endpoints": {
+            "chat": "/chat (POST)",
+            "health": "/health (GET)",
+            "clear-history": "/clear-history (POST)",
+            "analyze-image": "/analyze-image (POST)",
+            "generate-web": "/generate-web (POST)"
+        },
+        "docs": 'Send POST requests to /chat with {"message": "your text"}',
+        "brand": "Alpha Booster | Rwanda Creative IMG"
+    }), 200
 
 
-def extract_uploaded_files(files):
-    """Extract text from supported uploaded documents safely."""
-    extracted_parts = []
+# ============================================================
+# ERROR HANDLERS
+# ============================================================
+@app.errorhandler(413)
+def request_entity_too_large(_error):
+    return jsonify({
+        "error": "The uploaded request is too large. Please reduce file size."
+    }), 413
 
-    if not isinstance(files, list):
-        return ""
 
-    total_chars = 0
+# ============================================================
+# LOCAL DEVELOPMENT
+# Render runs this app using Gunicorn, not app.run().
+# ============================================================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "5000"))
+    print("=" * 50)
+    print("BOOSTER AI")
+    print("=" * 50)
+    print("Groq API key configured:", bool(GROQ_API_KEY))
+    print("Model:", GROQ_MODEL)
+    print("Conversation memory enabled (in-memory)")
+    print("PDF/DOCX/TXT/code file reading enabled")
+    print(f"Server: http://0.0.0.0:{port}")
+    print("=" * 50)
 
-    for file_info in files:
-        if not isinstance(file_info, dict):
-            continue
-
-        file_name = str(file_info.get("name", "uploaded_file"))
-        file_data = file_info.get("data", "")
-
-        if not isinstance(file_data, str) or not file_data:
-            continue
-
-        # Accept both raw base64 and data URLs.
-        if "," in file_data and file_data.lstrip().startswith("data:"):
-            file_data = file_data.split(",", 1)[1]
-
-        try:
-            file_bytes = base64.b64decode(file_data, validate=False)
-        except Exception:
-            extracted_parts.append(f"\nCould not decode file: {file_name}")
-            continue
-
-        try:
-            lower_name = file_name.lower()
+    app.run(host="0.0.0.0", port=port, debug=False)
